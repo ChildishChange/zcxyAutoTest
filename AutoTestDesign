@@ -31,6 +31,7 @@
 
 1. 从config文件中读取配置
 
+
 ```json
 {
     "repo":"https://github.com/qixjing/MathExam2018",
@@ -47,4 +48,23 @@
         ...
     }
 }
+```
+
+```
+命令格式
+
+首先读取config
+检查是否下载了repo
+    没有，下载repo
+如果 --all 
+    全部测试
+如果 --single
+    只测试单个学号
+
+test.exe test --all --config ./configpath
+
+
+
+test.exe test --single xxxx --config ./configpath
+
 ```
