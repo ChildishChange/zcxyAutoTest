@@ -4,8 +4,12 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using CommandLine;
+using LibGit2Sharp;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace AutoTest
 {
@@ -13,9 +17,11 @@ namespace AutoTest
     {
         static void Main(string[] args)
         {
+            Logger.Info("**** Auto test Program started. ****");
             Parser.Default.ParseArguments<TestOptions>(args)
                 .MapResult((TestOptions opts) => RunTestOptions(opts),
                             errs => 1);
+            Logger.Info("***** Auto test Program ended. *****");
         }
 
         public static int RunTestOptions(TestOptions opts)
@@ -24,22 +30,16 @@ namespace AutoTest
 
             if(!string.IsNullOrEmpty(opts.ConfigPath))
             {
-                //读取json
-                
-                //判断是否有目标文件夹
-                //有
-                    //略
-                //没有
-                    //下载
+                var configJson = (JObject)JsonConvert.DeserializeObject(File.ReadAllText(opts.ConfigPath));
+                string url = (string)configJson["repo"];
+                CloneRepo(url);
             }
             else
             {
-                Console.WriteLine("[ERROR]Program exit because of error above.");
+                Logger.Error("Program exit because of error above.");
                 return 1;
             }
-
             
-
             return 0;
         }
 
@@ -56,66 +56,41 @@ namespace AutoTest
                 {
                     var directoryInfo = new DirectoryInfo(absPath);
                     if (directoryInfo.Exists) return directoryInfo.FullName;
-                    Console.WriteLine($"[ERROR]Not exists! Please check the directory path: {directoryInfo.FullName}");
+                    Logger.Error($"Directory not exists! Please check the directory path: {directoryInfo.FullName}");
                 }
                 else
                 {
                     if (fileInfo.Exists) return fileInfo.FullName;
-                    Console.WriteLine($"[ERROR]Not exists! Please check the file path: {fileInfo.FullName}");
+                    Logger.Error($"File not exists! Please check the file path: {fileInfo.FullName}");
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[ERROR]{ex.Message} Please check the path: {path}");
+                Logger.Error($"{ex.Message} Please check the path: {path}");
             }
             return null;
         }
 
-        public bool DownloadCode(string Url)
+        public static void CloneRepo(string url)
         {
-            string codePath = Directory.GetCurrentDirectory() + @"\temp";
-            Directory.CreateDirectory(codePath);
+            string clonePath = Path.Combine(Directory.GetCurrentDirectory(),"temp");
             
-            
-            /*
-             需要添加一个解析json，读取下载信息的函数，来替换此处的test目录 
-             */
-            string codeFile = codePath + @"\" + "test";
-
-            if (File.Exists(codeFile))
+            if (Directory.Exists(clonePath))
             {
-                Console.WriteLine("[INFO]Already downloaded!");
-                return true;
+                Logger.Warning("Already cloned this repository before.");
+                return;
             }
-            
             try
             {
-                HttpWebRequest request = WebRequest.Create(Url) as HttpWebRequest;
-                HttpWebResponse response = request.GetResponse() as HttpWebResponse;
-                
-                Stream responseStream = response.GetResponseStream();
-
-                FileStream fs = new FileStream(codeFile, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
-
-                byte[] bArr = new byte[1024];
-                int size = responseStream.Read(bArr, 0, (int)bArr.Length);                
-                while (size > 0)
-                {
-                    fs.Write(bArr, 0, size);
-                    size = responseStream.Read(bArr, 0, (int)bArr.Length);
-                }
-
-                fs.Close();
-                responseStream.Close();
-                return true;
+                Repository.Clone(url, clonePath);
+                Logger.Info("Cloned this repository successfully.");
             }
-            catch (Exception e)
+            catch(Exception e)
             {
-                return false;
+                Logger.Error("Clone repository failed.");
             }
-
-            // https://github.com/ChildishChange/BlogPublishTool/archive/master.zip
-            return true;
+            
+            Thread.Sleep(1000);
         }
     }
 }
