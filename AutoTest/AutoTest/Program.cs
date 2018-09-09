@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -31,12 +32,56 @@ namespace AutoTest
             if(!string.IsNullOrEmpty(opts.ConfigPath))
             {
                 var configJson = (JObject)JsonConvert.DeserializeObject(File.ReadAllText(opts.ConfigPath));
+                //获取仓库
                 string url = (string)configJson["repo"];
-                CloneRepo(url);
+                string clonePath = Path.Combine(Directory.GetCurrentDirectory(), "temp");
+                try
+                {
+                    CloneRepo(url, clonePath);
+                }
+                catch (Exception e)
+                {
+                    Logger.Error("Clone repository failed.");
+                    return 1;
+                }
+                var DirectoryList = new DirectoryInfo(clonePath).GetDirectories().ToList();
+                //TODO:获取测试指令
+                var correctTests = configJson["correct"].ToList();
+                var robustTests = configJson["robust"].ToList();
+
+
+                //开始测试
+                foreach (var Dir in DirectoryList)
+                {
+                    //获取学生学号
+                    string StudentID = Dir.Name.Replace("PSP","");
+                    //获取文件夹内指定java文件
+                    FileInfo JavaFile = new FileInfo(Path.Combine(Dir.FullName, "MathExam", StudentID, ".java"));
+                    //编译目标代码
+                    if(CallCmd("javac " + JavaFile.Name))
+                    {
+                        //TODO:正确性测试
+                        foreach (var test in correctTests)
+                        {
+
+                        }
+                        //TODO:鲁棒性测试
+                        foreach (var test in robustTests)
+                        {
+
+                        }
+                    }
+                    else
+                    {
+                        //编译失败
+                        Logger.Error($"Error happened when compiling {JavaFile.Name}.");
+                        continue;
+                    }
+                }
             }
             else
             {
-                Logger.Error("Program exit because of error above.");
+                Logger.Info("Program exit because of error above.");
                 return 1;
             }
             
@@ -71,26 +116,50 @@ namespace AutoTest
             return null;
         }
 
-        public static void CloneRepo(string url)
+        public static void CloneRepo(string url, string path)
         {
-            string clonePath = Path.Combine(Directory.GetCurrentDirectory(),"temp");
-            
-            if (Directory.Exists(clonePath))
+            if (Directory.Exists(path))
             {
                 Logger.Warning("Already cloned this repository before.");
                 return;
             }
-            try
-            {
-                Repository.Clone(url, clonePath);
-                Logger.Info("Cloned this repository successfully.");
-            }
-            catch(Exception e)
-            {
-                Logger.Error("Clone repository failed.");
-            }
+            Repository.Clone(url, path);
+            Logger.Info("Cloned this repository successfully.");
             
             Thread.Sleep(1000);
         }
+
+        public static bool CallCmd(string strInput)
+        {
+            Process p = new Process();
+            p.StartInfo.FileName = "cmd.exe";
+            p.StartInfo.UseShellExecute = false;
+            p.StartInfo.RedirectStandardInput = true;
+            p.StartInfo.RedirectStandardOutput = true;
+            p.StartInfo.RedirectStandardError = true;
+            
+            p.Start();
+            p.StandardInput.WriteLine(strInput + "&exit");
+            p.StandardInput.AutoFlush = true;
+
+            //获取输出信息
+            string strOut = p.StandardOutput.ReadToEnd();
+            string strErr = p.StandardError.ReadToEnd();
+
+            p.WaitForExit();
+            p.Close();
+            if (!string.IsNullOrEmpty(strOut))
+            {
+                Logger.Info($"Program output follows:\n{strOut}");
+            }
+            
+            if (!string.IsNullOrEmpty(strErr))
+            {
+                Logger.Error($"Program Error as follows:\n{strErr}");
+                return false;
+            }
+            return true;
+        }
+       
     }
 }
