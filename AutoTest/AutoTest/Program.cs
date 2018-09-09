@@ -46,8 +46,8 @@ namespace AutoTest
                 }
                 var DirectoryList = new DirectoryInfo(clonePath).GetDirectories().ToList();
                 //TODO:获取测试指令
-                var correctTests = configJson["correct"].ToList();
-                var robustTests = configJson["robust"].ToList();
+                var correctTests = configJson["correct"].Select(x => x.ToString()).ToList();
+                var robustTests = configJson["robust"].Select(x => x.ToString()).ToList();
 
 
                 //开始测试
@@ -60,16 +60,8 @@ namespace AutoTest
                     //编译目标代码
                     if(CallCmd("javac " + JavaFile.Name))
                     {
-                        //TODO:正确性测试
-                        foreach (var test in correctTests)
-                        {
-
-                        }
-                        //TODO:鲁棒性测试
-                        foreach (var test in robustTests)
-                        {
-
-                        }
+                        TestCorrectness(JavaFile.Name, correctTests);
+                        TestRobustness(JavaFile.Name, robustTests);
                     }
                     else
                     {
@@ -131,35 +123,56 @@ namespace AutoTest
 
         public static bool CallCmd(string strInput)
         {
-            Process p = new Process();
-            p.StartInfo.FileName = "cmd.exe";
-            p.StartInfo.UseShellExecute = false;
-            p.StartInfo.RedirectStandardInput = true;
-            p.StartInfo.RedirectStandardOutput = true;
-            p.StartInfo.RedirectStandardError = true;
-            
-            p.Start();
-            p.StandardInput.WriteLine(strInput + "&exit");
-            p.StandardInput.AutoFlush = true;
-
-            //获取输出信息
-            string strOut = p.StandardOutput.ReadToEnd();
-            string strErr = p.StandardError.ReadToEnd();
-
-            p.WaitForExit();
-            p.Close();
-            if (!string.IsNullOrEmpty(strOut))
+            var binaryInfo = new ProcessStartInfo
             {
-                Logger.Info($"Program output follows:\n{strOut}");
-            }
+                FileName = "cmd.exe",
+                WindowStyle = ProcessWindowStyle.Hidden,
+                UseShellExecute = false,
+                RedirectStandardError = true,
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+            };
             
-            if (!string.IsNullOrEmpty(strErr))
+            using (Process cmd = Process.Start(binaryInfo))
             {
-                Logger.Error($"Program Error as follows:\n{strErr}");
-                return false;
+                cmd.StandardInput.WriteLine(strInput + "&exit");
+                cmd.StandardInput.AutoFlush = true;
+
+                //获取输出信息
+                string strOut = cmd.StandardOutput.ReadToEnd();
+                string strErr = cmd.StandardError.ReadToEnd();
+                
+                cmd.Close();
+                if (!string.IsNullOrEmpty(strOut))
+                {
+                    Logger.Info($"Program output follows:\n{strOut}");
+                }
+
+                if (!string.IsNullOrEmpty(strErr))
+                {
+                    Logger.Error($"Program Error as follows:\n{strErr}");
+                    return false;
+                }
+                return true;
             }
-            return true;
         }
        
+
+        public static void TestCorrectness(string javaName, List<string> correctTests)
+        {
+            //TODO:正确性测试
+            foreach (var test in correctTests)
+            {
+
+            }
+        }
+        public static void TestRobustness(string javaName, List<string> robustTests)
+        {
+            //TODO:鲁棒性测试
+            foreach (var test in robustTests)
+            {
+
+            }
+        }
     }
 }

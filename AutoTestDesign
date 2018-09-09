@@ -35,18 +35,16 @@
 ```json
 {
     "repo":"https://github.com/qixjing/MathExam2018",
-    "correct":{
-        "1":"1",
+    "correct":[
+        "1",
         ...
-        "5":"1 1",
-        ...
-        "9":"1 2",
+        "1 2",
         ...             
-    },
-    "robust":{
-        "1":"-1",
+    ],
+    "robust":[
+        "-1",
         ...
-    }
+    ]
 }
 ```
 
