@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using CommandLine;
@@ -53,10 +54,12 @@ namespace AutoTest
                 //开始测试
                 foreach (var Dir in DirectoryList)
                 {
+                    if (Dir.Name == ".git")
+                        continue;
                     //获取学生学号
                     string StudentID = Dir.Name.Replace("PSP","");
                     //获取文件夹内指定java文件
-                    FileInfo JavaFile = new FileInfo(Path.Combine(Dir.FullName, "MathExam", StudentID, ".java"));
+                    FileInfo JavaFile = new FileInfo(Path.Combine(Dir.FullName, "MathExam" + StudentID + ".java"));
                     //编译目标代码 
                     if(CallCmd("javac " + JavaFile.FullName))
                     {
@@ -164,13 +167,16 @@ namespace AutoTest
         public static void TestCorrectness(string javaFilePath, List<string> correctTests)
         {
             Logger.Info("Start correctness tests.");
+
+            FileInfo javaFile = new FileInfo(javaFilePath);
+
             foreach (var test in correctTests)
             {
                 Logger.Info($"Start test \"{test}\"");
 
                 var outFile = new FileInfo(
                                   Path.Combine(
-                                       new FileInfo(javaFilePath).DirectoryName,
+                                       javaFile.DirectoryName,
                                        "out.txt"));
                 
                 //测试前若存在out.txt则删除
@@ -180,10 +186,10 @@ namespace AutoTest
                 }
 
                 //调callcmd
-                CallCmd("java " + javaFilePath + " " + test);
+                CallCmd("java -classpath " + javaFile.DirectoryName + " " + javaFile.Name.Replace(".java","") + " " + test);
 
                 //测试后不存在out.txt则报错
-                if(!outFile.Exists)
+                if(!File.Exists(outFile.FullName))
                 {
                     Logger.Error("File \"out.txt\" not found!");
                     continue;
@@ -207,36 +213,102 @@ namespace AutoTest
 
         public static void CheckOutFile(FileInfo outFile, string testStr)
         {
-            /*
-            - 题目数量是否正确 
-            - 答案与题目是否一一对应 -> 字符串能够匹配到等号
-            - 答案是否正确 -> 需要解析题目
-            - 题目与答案所使用的数字范围是否合理 -> 用正则表达式筛选所有等式，是否能筛出题目中大于三位且开头不为零的数字
-            - 题目是否重复
-                - a + b 等价于 b + a
-                - a × b 等价于 b × a
-            - 输出格式是否正确 -> 用两种正则，有余数和没有余数
-                - 题号 -> 读取前n行，/直接判断子串位置
-                - 题目和答案空行 -> 读取文件的前N行，判断第N+1行是否是空格 是空格 则题目数量正确 不是，判断有没有等号，没有则题目数量错误
-            */
-
-            /*
+            var parameters = testStr.Split(' ');
+            var numOfExercise = int.Parse(parameters.First());
+            var grade = (parameters.Count() > 1) ? int.Parse(parameters.Last()) : 1;
+            var exercises = new List<string>();
+            const string addMinusPattern = "";
+            const string divideMultiPattern = "";
+            var finalPattern = (grade == 1) ? addMinusPattern : divideMultiPattern;
             
-            从testStr中读取出参数，参数二默认为1
-            设置两个字符串，根据字符串选择题目测试的正则
+            //准备读取文件        
+            FileStream fileStream = new FileStream(outFile.FullName, FileMode.Open, FileAccess.Read);
+            StreamReader streamReader = new StreamReader(fileStream, Encoding.Default);
+            //进入流的初始位置
+            fileStream.Seek(0, SeekOrigin.Begin);
 
-            for i = 1;i<=参数;i++ 
-               一次读一行
-               判断题目正则 -> 不符合 ->logger
-               判断重复
-            
-            判断第N+1行是否是空格 是空格 则题目数量正确 不是，判断有没有等号，没有则题目数量错误
+            //如果parameter 为 0 ，需要额外处理
+            if(numOfExercise == 0)
+            {
+                return;
+            }
 
-            for 继续
-                如果到文件末尾 -> 数量有问题
-                一一对应是否匹配
-                答案是否有问题
-            */
+            //检查题目
+            HashSet<string> exerciseSet = new HashSet<string>();
+            List<string> exerciseList = new List<string>();
+
+
+            var i = 1;
+            for(; i <= numOfExercise; i++)
+            {
+                var line = streamReader.ReadLine();
+                
+                if (line == null)
+                {
+                    Logger.Error("Number of exercise is not enough!");
+                    //break;
+                }
+                //判断题目是否符合格式
+                var matches = Regex.Matches(line,finalPattern);
+                
+                //没有识别出，或识别出大于一个，都属于题目格式错误
+
+                //TODO 准备两个正则，一个用来检测是否符合规则，另一个用来检测出题范围是否符合规则
+                if(matches.Count!=1)
+                {
+                    Logger.Error($"Wrong format in line {i}:\n{line}");
+                    //break;
+                }
+
+                //识别出了
+                //判断题号
+
+                var index = Regex.Match(line, "\\(\\d{1,}\\)").Value;
+                var indexOfExercise = int.Parse(index.Trim('(', ')'));
+
+               
+
+                //不重复则加入set
+                if (exerciseSet.Contains(Swap(line.Replace(index + " ", "").Replace(" ",""))))
+                {
+                    Logger.Warning($"Duplicated:\n{line}");
+                }
+                else
+                {
+                    exerciseSet.Add(Swap(line.Replace(index + " ", "").Replace(" ", "")));
+                }
+
+
+                if (i != indexOfExercise)
+                {
+                    Logger.Error($"Wrong exercise index in line {i}:\n{line}\nIt supposed to be {i}");
+                    break;
+                }
+                exerciseList.Add(line);
+                
+            }
+
+            fileStream.Close();
+            streamReader.Close();
+
+
+        }
+        public static string Swap(string line)
+        {
+            StringBuilder sb = new StringBuilder();
+            if(line.Contains('+'))
+            {
+                var ops = line.Split('+');
+                sb.Append((int.Parse(ops[0]) > int.Parse(ops[1])) ? ops[1] + "+" + ops[0] : line);
+                return sb.ToString();
+            }
+            if(line.Contains('×'))
+            {
+                var ops = line.Split('×');
+                sb.Append((int.Parse(ops[0]) > int.Parse(ops[1])) ? ops[1] + "×" + ops[0] : line);
+                return sb.ToString();
+            }
+            return line;
         }
     }
 }
