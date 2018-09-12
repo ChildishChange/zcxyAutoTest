@@ -215,16 +215,19 @@ namespace AutoTest
         {
             var parameters = testStr.Split(' ');
             var numOfExercise = int.Parse(parameters.First());
-            var grade = (parameters.Count() > 1) ? int.Parse(parameters.Last()) : 1;
             var exercises = new List<string>();
-            const string addMinusPattern = "";
-            const string divideMultiPattern = "";
-            var finalPattern = (grade == 1) ? addMinusPattern : divideMultiPattern;
             
-            //准备读取文件        
+            const string addMinusPattern = @"^\(\d{1,}\)\s\d{1,2}\s[+-]\s\d{1,2}$";
+            const string divideMultiPattern = @"^\(\d{1,}\)\s\d{1,2}\s[×÷]\s\d{1,2}$";
+            const string addMinusEqPattern = @"^\(\d{1,}\)\s\d{1,2}\s[+-]\s\d{1,2}\s=\s\d{1,2}$";
+            const string divideMultiEqPattern = @"^\(\d{1,}\)\s\d{1,2}\s[×]\s\d{1,2}\s=\s\d{1,2}$|^\(\d{1,}\)\s\d{1,2}\s[÷]\s\d{1,2}\s=\s\d{1,2}(\.{3}\d{1,2})?$";
+
+            var grade = (parameters.Count() > 1) ? int.Parse(parameters.Last()) : 1;
+            var finalPattern = (grade == 1) ? addMinusPattern : divideMultiPattern;
+            var finalEqPattern = (grade == 1) ? addMinusEqPattern : divideMultiEqPattern;
+
             FileStream fileStream = new FileStream(outFile.FullName, FileMode.Open, FileAccess.Read);
             StreamReader streamReader = new StreamReader(fileStream, Encoding.Default);
-            //进入流的初始位置
             fileStream.Seek(0, SeekOrigin.Begin);
 
             //如果parameter 为 0 ，需要额外处理
@@ -236,7 +239,6 @@ namespace AutoTest
             //检查题目
             HashSet<string> exerciseSet = new HashSet<string>();
             List<string> exerciseList = new List<string>();
-
 
             var i = 1;
             for(; i <= numOfExercise; i++)
@@ -252,22 +254,15 @@ namespace AutoTest
                 var matches = Regex.Matches(line,finalPattern);
                 
                 //没有识别出，或识别出大于一个，都属于题目格式错误
-
-                //TODO 准备两个正则，一个用来检测是否符合规则，另一个用来检测出题范围是否符合规则
                 if(matches.Count!=1)
                 {
                     Logger.Error($"Wrong format in line {i}:\n{line}");
-                    //break;
                 }
-
+                
                 //识别出了
-                //判断题号
-
                 var index = Regex.Match(line, "\\(\\d{1,}\\)").Value;
                 var indexOfExercise = int.Parse(index.Trim('(', ')'));
-
-               
-
+                
                 //不重复则加入set
                 if (exerciseSet.Contains(Swap(line.Replace(index + " ", "").Replace(" ",""))))
                 {
@@ -277,16 +272,15 @@ namespace AutoTest
                 {
                     exerciseSet.Add(Swap(line.Replace(index + " ", "").Replace(" ", "")));
                 }
-
-
+                //判断题号
                 if (i != indexOfExercise)
                 {
                     Logger.Error($"Wrong exercise index in line {i}:\n{line}\nIt supposed to be {i}");
-                    break;
                 }
                 exerciseList.Add(line);
-                
             }
+
+            //判断是否是空行
 
             fileStream.Close();
             streamReader.Close();
