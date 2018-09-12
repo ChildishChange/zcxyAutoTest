@@ -223,6 +223,7 @@ namespace AutoTest
             const string divideMultiEqPattern = @"^\(\d{1,}\)\s\d{1,2}\s[×]\s\d{1,2}\s=\s\d{1,2}$|^\(\d{1,}\)\s\d{1,2}\s[÷]\s\d{1,2}\s=\s\d{1,2}(\.{3}\d{1,2})?$";
 
             var grade = (parameters.Count() > 1) ? int.Parse(parameters.Last()) : 1;
+
             var finalPattern = (grade == 1) ? addMinusPattern : divideMultiPattern;
             var finalEqPattern = (grade == 1) ? addMinusEqPattern : divideMultiEqPattern;
 
@@ -237,18 +238,20 @@ namespace AutoTest
             }
 
             //检查题目
-            HashSet<string> exerciseSet = new HashSet<string>();
+            Dictionary<string,string> exerciseDic = new Dictionary<string, string>();
             List<string> exerciseList = new List<string>();
 
             var i = 1;
             for(; i <= numOfExercise; i++)
             {
                 var line = streamReader.ReadLine();
-                
                 if (line == null)
                 {
                     Logger.Error("Number of exercise is not enough!");
-                    //break;
+                    fileStream.Close();
+                    streamReader.Close();
+
+                    return;
                 }
                 //判断题目是否符合格式
                 var matches = Regex.Matches(line,finalPattern);
@@ -264,13 +267,13 @@ namespace AutoTest
                 var indexOfExercise = int.Parse(index.Trim('(', ')'));
                 
                 //不重复则加入set
-                if (exerciseSet.Contains(Swap(line.Replace(index + " ", "").Replace(" ",""))))
+                if (exerciseDic.ContainsValue(Swap(line.Replace(index + " ", "").Replace(" ",""))))
                 {
                     Logger.Warning($"Duplicated:\n{line}");
                 }
                 else
                 {
-                    exerciseSet.Add(Swap(line.Replace(index + " ", "").Replace(" ", "")));
+                    exerciseDic.Add(line,Swap(line.Replace(index + " ", "").Replace(" ", "")));
                 }
                 //判断题号
                 if (i != indexOfExercise)
@@ -280,12 +283,89 @@ namespace AutoTest
                 exerciseList.Add(line);
             }
 
-            //判断是否是空行
+            //判断否是空行
+            if(!string.IsNullOrWhiteSpace(streamReader.ReadLine()))
+            {
+                Logger.Error("Exercises and Answers are not divided by a space line.");
+            }
+
+            for(i = 1; i < numOfExercise; i ++)
+            {
+                var line = streamReader.ReadLine();
+
+                if(line == null)
+                {
+                    Logger.Error($"Number of answer is not enough!");
+                    fileStream.Close();
+                    streamReader.Close();
+
+                    return;
+                }
+
+                if (!line.StartsWith(exerciseList[i - 1]))
+                {
+                    Logger.Error($"Answer doesn't match exercise:\n{line}");
+                    continue;
+                }
+
+                //匹配剩下的部分是否符合要求
+                var matches = Regex.Matches(line, finalEqPattern);
+                if(matches.Count!=1)
+                {
+                    Logger.Error($"Wrong format in answer {i}:\n{line}");
+                }
+
+                //计算算式的答案
+                if(!Calculate(exerciseDic[exerciseList[i-1]],line.Replace(exerciseList[i-1]+" = ","")))
+                {
+                    Logger.Error($"Wrong answer:\n{line}");
+                }
+            }
+
 
             fileStream.Close();
             streamReader.Close();
 
 
+        }
+
+        public static bool Calculate(string exercise, string answer)
+        {
+            if(exercise.Contains('+'))
+            {
+                var ops = exercise.Split('+');
+                return int.Parse(answer) == int.Parse(ops[0]) + int.Parse(ops[1]);
+            }
+            if(exercise.Contains('-'))
+            {
+                var ops = exercise.Split('-');
+                return int.Parse(answer) == int.Parse(ops[0]) - int.Parse(ops[1]);
+            }
+            if(exercise.Contains('×'))
+            {
+                var ops = exercise.Split('×');
+                return int.Parse(answer) == int.Parse(ops[0]) * int.Parse(ops[1]);
+            }
+            if(exercise.Contains('÷'))
+            {
+                var ops = exercise.Split('÷');
+                if(int.Parse(ops[0])%int.Parse(ops[1]) == 0 )
+                {
+                    if (answer.Contains('.')) return false;
+                    return int.Parse(ops[0]) / int.Parse(ops[1]) == int.Parse(answer);
+                }
+                else
+                {
+                    if (!answer.Contains('.')) return false;
+
+                    var ans = answer.Replace("..."," ").Split(' ');
+
+                    return int.Parse(ops[1]) * int.Parse(ans[0]) + int.Parse(ans[1]) == int.Parse(ops[0]);
+
+                }
+            }
+            
+            return false;
         }
         public static string Swap(string line)
         {
