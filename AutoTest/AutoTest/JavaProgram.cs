@@ -11,6 +11,7 @@ namespace AutoTest
         public string runTestCmd { set; get; }
         public string javaFilePath { set; get; }
         public bool canRunTest { set; get; }
+        public string dirName { set; get; }
 
         /// <summary>
         /// 根据传入的PSP目录实例化JAVAProgram对象
@@ -19,6 +20,7 @@ namespace AutoTest
         /// <param name="PSPDirPath"></param>
         public JavaProgram(DirectoryInfo pspDir)
         {
+            this.dirName = pspDir.Name;
             CheckPSP(pspDir);
             if (!canRunTest) { return; }
 

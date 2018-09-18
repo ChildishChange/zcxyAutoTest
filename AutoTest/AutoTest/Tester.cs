@@ -73,64 +73,34 @@ namespace AutoTest
             
         }
 
-        public static string CheckJavaFile(string javaFilePath)
-        {
-            //返回编译应该使用的字符串
-
-
-            //如果文件内含有“import java.util.Scanner;”就返回null
-            return null;
-        }
-
-        public static void TestCorrectness(string javaFilePath, List<string> correctTests)
+        public static void TestCorrectness(JavaProgram javaProgram, List<string> correctTests)
         {
             Logger.Info("Start correctness tests.");
-
-            FileInfo javaFile = new FileInfo(javaFilePath);
-
             foreach (var test in correctTests)
             {
                 Logger.Info($"Start test \"{test}\"");
+                if(File.Exists(@".\out.txt")){ File.Delete(@".\out.txt"); }
 
-                var outFile = new FileInfo(Path.Combine(javaFile.DirectoryName,"out.txt"));
+                CallCmd(javaProgram.runTestCmd + test);
+                Thread.Sleep(2000);
 
-                //测试前若存在out.txt则删除
-                //if (outFile.Exists)
-                if(File.Exists(@".\out.txt"))
-                {
-                    //File.Delete(outFile.FullName);
-                    File.Delete(@".\out.txt");
-                }
-
-                //调callcmd
-                CallCmd("java -classpath " + javaFile.DirectoryName + " " + javaFile.Name.Replace(".java", "") + " " + test);
-
-                Thread.Sleep(3000);
-
-                //测试后不存在out.txt则报错
-                //if (!File.Exists(outFile.FullName))
-                if(!File.Exists(@".\out.txt"))
+                if (!File.Exists(@".\out.txt"))
                 {
                     Logger.Error("File \"out.txt\" not found!");
                     continue;
                 }
 
-                //一项一项确认
-                Tester.CheckOutFile(@".\out.txt", test);
+                CheckOutFile(@".\out.txt", test);
             }
         }
 
-        public static void TestRobustness(string javaFilePath, List<string> robustTests)
+        public static void TestRobustness(JavaProgram javaProgram, List<string> robustTests)
         {
             Logger.Info("Start robustness test.");
-
-            FileInfo javaFile = new FileInfo(javaFilePath);
-
             foreach (var test in robustTests)
             {
                 //程序会主动输出info或者error，所以不需要额外的检测，只需要将所有程序运行即可
-                
-                CallCmd("java -classpath " + javaFile.DirectoryName + " " + javaFile.Name.Replace(".java", "") + " " + test);
+                CallCmd(javaProgram.runTestCmd + test);
             }
         }
 

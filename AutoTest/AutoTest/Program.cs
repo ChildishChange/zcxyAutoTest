@@ -56,34 +56,18 @@ namespace AutoTest
                 var robustTests = configJson["robust"].Select(x => x.ToString()).ToList();
                 
                 //开始测试
-                /*
-                foreach (var Dir in DirectoryList)
-                {
-                    if (Dir.Name == ".git") continue;
-
-                    string StudentID = Dir.Name.Replace("PSP","");
-                    FileInfo JavaFile = new FileInfo(Path.Combine(Dir.FullName, "MathExam" + StudentID + ".java"));
-                    
-                    //编译，编译其实没有问题，有问题的是运行
-                    var complieCmd = Tester.CheckJavaFile(JavaFile.FullName);
-                    if(complieCmd == null) continue;
-
-                    //if (Tester.CallCmd("javac " + JavaFile.FullName))
-                    if (Tester.CallCmd(complieCmd))
-                    {
-                        Logger.Info($"Start test No.{StudentID} program.");
-                        Tester.TestCorrectness(JavaFile.FullName, correctTests);
-                        Tester.TestRobustness(JavaFile.FullName, robustTests);
-                        Logger.Info($"End test No.{StudentID} program.");
-                    }
-                    else
-                    {
-                        Logger.Error($"Error happened when compiling No.{StudentID}");
-                        continue;
-                    }
-                }
                 
-                */
+                foreach (var javaProgram in JavaProgramList)
+                {
+                    if (!javaProgram.canRunTest) continue;
+
+                    Logger.Info($"Start test {javaProgram.dirName}.");
+                    Tester.TestCorrectness(javaProgram, correctTests);
+                    Tester.TestRobustness(javaProgram, robustTests);
+                    Logger.Info($"End test {javaProgram.dirName}.");
+                }
+
+
             }
             else
             {
