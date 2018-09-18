@@ -28,7 +28,8 @@ namespace AutoTest
             Console.WriteLine($"{type} FROM [{logPath}] : {message}");
             using (var sw = new StreamWriter(logPath, true))
             {
-                sw.WriteLineAsync($"{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}  {type}  {message}");
+                sw.WriteLine($"{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}  {type}  {message}");
+                sw.Close();
             }
         }
     }
