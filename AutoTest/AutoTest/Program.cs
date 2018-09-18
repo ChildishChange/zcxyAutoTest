@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -9,7 +10,7 @@ using Newtonsoft.Json.Linq;
 
 namespace AutoTest
 {
-    class Program
+    public class Program
     {
         static void Main(string[] args)
         {
@@ -40,22 +41,35 @@ namespace AutoTest
                     Logger.Error("Clone repository failed.");
                     return 1;
                 }
-
+                //获取所有文件夹
                 var DirectoryList = new DirectoryInfo(clonePath).GetDirectories().ToList();
-                
+
+                //创建javaProgram对象列表
+                var JavaProgramList = new List<JavaProgram>();
+                foreach (var Dir in DirectoryList)
+                {
+                    JavaProgramList.Add(new JavaProgram(Dir));
+                }
+
                 //获取测试指令
                 var correctTests = configJson["correct"].Select(x => x.ToString()).ToList();
                 var robustTests = configJson["robust"].Select(x => x.ToString()).ToList();
                 
                 //开始测试
+                /*
                 foreach (var Dir in DirectoryList)
                 {
-                    if (Dir.Name == ".git")
-                        continue;
+                    if (Dir.Name == ".git") continue;
+
                     string StudentID = Dir.Name.Replace("PSP","");
                     FileInfo JavaFile = new FileInfo(Path.Combine(Dir.FullName, "MathExam" + StudentID + ".java"));
+                    
+                    //编译，编译其实没有问题，有问题的是运行
+                    var complieCmd = Tester.CheckJavaFile(JavaFile.FullName);
+                    if(complieCmd == null) continue;
 
-                    if (Tester.CallCmd("javac " + JavaFile.FullName))
+                    //if (Tester.CallCmd("javac " + JavaFile.FullName))
+                    if (Tester.CallCmd(complieCmd))
                     {
                         Logger.Info($"Start test No.{StudentID} program.");
                         Tester.TestCorrectness(JavaFile.FullName, correctTests);
@@ -68,6 +82,8 @@ namespace AutoTest
                         continue;
                     }
                 }
+                
+                */
             }
             else
             {

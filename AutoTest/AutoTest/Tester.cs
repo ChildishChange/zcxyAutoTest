@@ -73,6 +73,14 @@ namespace AutoTest
             
         }
 
+        public static string CheckJavaFile(string javaFilePath)
+        {
+            //返回编译应该使用的字符串
+
+
+            //如果文件内含有“import java.util.Scanner;”就返回null
+            return null;
+        }
 
         public static void TestCorrectness(string javaFilePath, List<string> correctTests)
         {
@@ -125,8 +133,6 @@ namespace AutoTest
                 CallCmd("java -classpath " + javaFile.DirectoryName + " " + javaFile.Name.Replace(".java", "") + " " + test);
             }
         }
-
-
 
         public static void CheckOutFile(string outFile, string testStr)
         {

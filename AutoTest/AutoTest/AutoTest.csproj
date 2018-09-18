@@ -63,6 +63,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ExerciseHandler.cs" />
+    <Compile Include="JavaProgram.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="Option.cs" />
     <Compile Include="Tester.cs" />
