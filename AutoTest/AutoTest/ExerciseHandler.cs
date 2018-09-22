@@ -16,7 +16,7 @@ namespace AutoTest
             if (exercise.Contains('/'))
             {
                 var answer = exercise.Split('=')[1];
-                var ops = exercise.Replace(answer,"").Split('/');
+                var ops = exercise.Split('=')[0].Split('/');
                 
                 if (int.Parse(ops[0]) % int.Parse(ops[1]) == 0)
                 {

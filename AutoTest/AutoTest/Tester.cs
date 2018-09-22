@@ -84,16 +84,26 @@ namespace AutoTest
                 Logger.Info($"Start test \"{test}\"");
                 if(File.Exists(@".\out.txt")){ File.Delete(@".\out.txt"); }
 
-                CallCmd(javaProgram.runTestCmd + test);
+
+                //需要添加一个东西
+
+                if(CallCmd(javaProgram.runTestCmd + test))
+                {
+                    if (!File.Exists(@".\out.txt"))
+                    {
+                        Logger.Error("File \"out.txt\" not found!");
+                        continue;
+                    }
+
+                    CheckOutFile(@".\out.txt", test);
+
+                }
+                else
+                {
+                    Logger.Error($"Error happened when test '{test}'");
+                }
                 Thread.Sleep(2000);
 
-                if (!File.Exists(@".\out.txt"))
-                {
-                    Logger.Error("File \"out.txt\" not found!");
-                    continue;
-                }
-
-                CheckOutFile(@".\out.txt", test);
             }
         }
 
@@ -112,6 +122,7 @@ namespace AutoTest
             var parameters = testStr.Split(' ');
             var numOfExercise = int.Parse(parameters.First());
             var exercises = new List<string>();
+            bool containsEqual = false;
 
             const string addMinusPattern = @"^\(\d{1,}\)\d{1,2}[+-]\d{1,2}(=)?$";
             const string divideMultiPattern = @"^\(\d{1,}\)\d{1,2}[×÷*/]\d{1,2}(=)?$";
@@ -155,7 +166,11 @@ namespace AutoTest
 
                 if(line.Contains('='))
                 {
-                    Logger.Warning("Warning! Contains '='.");
+                    if(!containsEqual)
+                    {
+                        Logger.Warning("Contains '='.");
+                        containsEqual = true;
+                    }
                     line = line.TrimEnd('=');
                 }
                 

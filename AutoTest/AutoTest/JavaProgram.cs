@@ -29,8 +29,10 @@ namespace AutoTest
             CheckScannerAndPackage();
             if (!canRunTest) { return; }
             
-            this.canRunTest = Tester.CallCmd($"javac {javaFilePath}") || 
-                              Tester.CallCmd($"javac -encoding UTF-8 {javaFilePath}");
+            this.canRunTest = Tester.CallCmd($"javac {javaFilePath.Replace("MathExam"+dirName.Remove(0, 3),"*")}") ||
+                              Tester.CallCmd($"javac -encoding UTF-8 {javaFilePath.Replace("MathExam" + dirName.Remove(0, 3), "*")}");
+            //this.canRunTest = Tester.CallCmd($"javac {javaFilePath}") || 
+            //                  Tester.CallCmd($"javac -encoding UTF-8 {javaFilePath}");
 
             if (!canRunTest)
             {
