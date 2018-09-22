@@ -153,6 +153,12 @@ namespace AutoTest
                     return;
                 }
 
+                if(line.Contains('='))
+                {
+                    Logger.Warning("Warning! Contains '='.");
+                    line = line.TrimEnd('=');
+                }
+                
                 //这里需要替换÷为/ 替换×为*
                 line = line.Replace('÷', '/');
                 line = line.Replace('×', '*');
@@ -224,7 +230,8 @@ namespace AutoTest
 
 
                 //计算算式的答案
-                if (!ExerciseHandler.Calculate(exerciseDic[exerciseList[i - 1]], line.Replace(exerciseList[i - 1] + " = ", "")))
+                var index = Regex.Match(line, "\\(\\d{1,}\\)").Value;
+                if (!ExerciseHandler.Calculate(line.Replace(index,"")))
                 {
                     Logger.Error($"Wrong answer : {line}");
                     fileStream.Close();
