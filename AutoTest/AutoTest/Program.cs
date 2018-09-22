@@ -41,9 +41,9 @@ namespace AutoTest
                     Logger.Error("Clone repository failed.");
                     return 1;
                 }
+
                 //获取所有文件夹
                 var DirectoryList = new DirectoryInfo(clonePath).GetDirectories().ToList();
-
                 //创建javaProgram对象列表
                 var JavaProgramList = new List<JavaProgram>();
                 foreach (var Dir in DirectoryList)
@@ -56,18 +56,15 @@ namespace AutoTest
                 var robustTests = configJson["robust"].Select(x => x.ToString()).ToList();
                 
                 //开始测试
-                
                 foreach (var javaProgram in JavaProgramList)
                 {
                     if (!javaProgram.canRunTest) continue;
 
-                    Logger.Info($"Start test {javaProgram.dirName}.");
+                    Logger.Info($"*** Start test {javaProgram.dirName} ***");
                     Tester.TestCorrectness(javaProgram, correctTests);
-                    Tester.TestRobustness(javaProgram, robustTests);
-                    Logger.Info($"End test {javaProgram.dirName}.");
+                    //Tester.TestRobustness(javaProgram, robustTests);
+                    Logger.Info($"*** End test {javaProgram.dirName} ***");
                 }
-
-
             }
             else
             {

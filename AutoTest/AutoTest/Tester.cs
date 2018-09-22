@@ -31,16 +31,19 @@ namespace AutoTest
                 using (Process cmd = Process.Start(binaryInfo))
                 {
                     //TODO 添加超时kill process
-                    cmd.StandardInput.WriteLine(strInput + "&exit");
+                    cmd.StandardInput.WriteLine(strInput);
+                    cmd.StandardInput.WriteLine("exit");
                     cmd.StandardInput.AutoFlush = true;
 
                     //获取输出信息
-                    string strOut = cmd.StandardOutput.ReadToEnd();
+                    
+                    cmd.BeginOutputReadLine();
                     string strErr = cmd.StandardError.ReadToEnd();
+                    string strOut = null;
+                    cmd.OutputDataReceived += (s, e) => strOut = e.Data;
 
-
-                    //Start monitor
-                    cmd.WaitForExit(20 * 1000);
+                    cmd.WaitForExit();
+                    
                     timeWatch.Stop();
                     //Release all resources
                     if (!cmd.HasExited)
@@ -58,7 +61,7 @@ namespace AutoTest
 
                     if (!string.IsNullOrEmpty(strErr))
                     {
-                        Logger.Error($"Program Error when running \"{strInput}\" are as follows:\n{strErr}");
+                        //Logger.Error($"Program Error when running \"{strInput}\" are as follows:\n{strErr}");
                         return false;
                     }
                     return true;
@@ -110,10 +113,11 @@ namespace AutoTest
             var numOfExercise = int.Parse(parameters.First());
             var exercises = new List<string>();
 
-            const string addMinusPattern = @"^\(\d{1,}\)\s\d{1,2}\s[+-]\s\d{1,2}$";
-            const string divideMultiPattern = @"^\(\d{1,}\)\s\d{1,2}\s[×÷]\s\d{1,2}$";
-            const string addMinusEqPattern = @"^\(\d{1,}\)\s\d{1,2}\s[+-]\s\d{1,2}\s=\s\d{1,2}$";
-            const string divideMultiEqPattern = @"^\(\d{1,}\)\s\d{1,2}\s[×]\s\d{1,2}\s=\s\d{1,2}$|^\(\d{1,}\)\s\d{1,2}\s[÷]\s\d{1,2}\s=\s\d{1,2}(\.{3}\d{1,2})?$";
+            const string addMinusPattern = @"^\(\d{1,}\)\d{1,2}[+-]\d{1,2}(=)?$";
+            const string divideMultiPattern = @"^\(\d{1,}\)\d{1,2}[×÷*/]\d{1,2}(=)?$";
+
+            const string addMinusEqPattern = @"^\(\d{1,}\)\d{1,2}[+-]\d{1,2}=\d{1,2}$";
+            const string divideMultiEqPattern = @"^\(\d{1,}\)\d{1,2}[×*]\d{1,2}=\d{1,2}$|^\(\d{1,}\)\d{1,2}[÷/]\d{1,2}=\d{1,2}(\.{3}\d{1,2})?$";
 
             var grade = (parameters.Count() > 1) ? int.Parse(parameters.Last()) : 1;
 
@@ -124,53 +128,53 @@ namespace AutoTest
             StreamReader streamReader = new StreamReader(fileStream, Encoding.Default);
             fileStream.Seek(0, SeekOrigin.Begin);
 
-            //如果parameter 为 0 ，需要额外处理
-            if (numOfExercise == 0)
-            {
-                return;
-            }
+            if (numOfExercise == 0){ return; }
 
-            //检查题目
             Dictionary<string, string> exerciseDic = new Dictionary<string, string>();
             List<string> exerciseList = new List<string>();
 
             var i = 1;
             for (; i <= numOfExercise; i++)
             {
-                var line = streamReader.ReadLine();
+                var line = streamReader.ReadLine().Replace(" ","");
                 if (line == null)
                 {
                     Logger.Error("Number of exercise is not enough!");
                     fileStream.Close();
                     streamReader.Close();
-
                     return;
                 }
-                //判断题目是否符合格式
-                var matches = Regex.Matches(line, finalPattern);
 
-                //没有识别出，或识别出大于一个，都属于题目格式错误
-                if (matches.Count != 1)
+                if (!Regex.IsMatch(line,finalPattern))
                 {
-                    Logger.Error($"Wrong format in line {i}:\n{line}");
-                    continue;
+                    Logger.Error($"Wrong format in line {i} : {line}");
+                    fileStream.Close();
+                    streamReader.Close();
+                    return;
                 }
+
+                //这里需要替换÷为/ 替换×为*
+                line = line.Replace('÷', '/');
+                line = line.Replace('×', '*');
+
 
                 //识别出了
                 var index = Regex.Match(line, "\\(\\d{1,}\\)").Value;
                 var indexOfExercise = int.Parse(index.Trim('(', ')'));
-
                 
-                if (exerciseDic.ContainsValue(ExerciseHandler.Swap(line.Replace(index + " ", "").Replace(" ", ""))))
+                if (exerciseDic.ContainsValue(ExerciseHandler.Swap(line.Replace(index , ""))))
                 {
-                    Logger.Warning($"Duplicated:\n{line}");
+                    Logger.Warning($"Duplicated : {line}");
                 }
-                exerciseDic.Add(line, ExerciseHandler.Swap(line.Replace(index + " ", "").Replace(" ", "")));
+                exerciseDic.Add(line, ExerciseHandler.Swap(line.Replace(index, "")));
                 
                 //判断题号
                 if (i != indexOfExercise)
                 {
-                    Logger.Error($"Wrong exercise index in line {i}:\n{line}\nIt supposed to be {i}");
+                    Logger.Error($"Wrong exercise index in line {i} : {line}\nIt supposed to be {i}");
+                    fileStream.Close();
+                    streamReader.Close();
+                    return;
                 }
                 exerciseList.Add(line);
             }
@@ -188,43 +192,49 @@ namespace AutoTest
                 streamReader.Close();
                 return;
             }
-
+            //检查答案
             for (i = 1; i < numOfExercise; i++)
             {
-                var line = streamReader.ReadLine();
+                var line = streamReader.ReadLine().Replace(" ", "");
 
                 if (line == null)
                 {
                     Logger.Error($"Number of answer is not enough!");
                     fileStream.Close();
                     streamReader.Close();
-
                     return;
                 }
 
                 if (!line.StartsWith(exerciseList[i - 1]))
                 {
-                    Logger.Error($"Answer doesn't match exercise:\n{line}");
-                    continue;
+                    Logger.Error($"Answer doesn't match exercise : {line}");
+                    fileStream.Close();
+                    streamReader.Close();
+                    return;
                 }
 
                 //匹配剩下的部分是否符合要求
-                var matches = Regex.Matches(line, finalEqPattern);
-                if (matches.Count != 1)
+                if (!Regex.IsMatch(line, finalEqPattern))
                 {
-                    Logger.Error($"Wrong format in answer {i}:\n{line}");
+                    Logger.Error($"Wrong format in answer {i} : {line}");
+                    fileStream.Close();
+                    streamReader.Close();
+                    return;
                 }
+
 
                 //计算算式的答案
                 if (!ExerciseHandler.Calculate(exerciseDic[exerciseList[i - 1]], line.Replace(exerciseList[i - 1] + " = ", "")))
                 {
-                    Logger.Error($"Wrong answer:\n{line}");
+                    Logger.Error($"Wrong answer : {line}");
+                    fileStream.Close();
+                    streamReader.Close();
+                    return;
                 }
             }
             
             fileStream.Close();
             streamReader.Close();
-
 
         }
     }

@@ -20,7 +20,9 @@ namespace AutoTest
         /// <param name="PSPDirPath"></param>
         public JavaProgram(DirectoryInfo pspDir)
         {
+            Logger.Info($"Start initializing {pspDir}");
             this.dirName = pspDir.Name;
+
             CheckPSP(pspDir);
             if (!canRunTest) { return; }
 
@@ -42,15 +44,15 @@ namespace AutoTest
                     Directory.Delete(Path.Combine(pspDir.FullName, this.packageName.Replace('.', '\\')),true);
                 Directory.CreateDirectory(Path.Combine(pspDir.FullName, this.packageName.Replace('.', '\\')));
                 //移动class文件
-                File.Move(new FileInfo(this.javaFilePath).FullName.Replace(".java",".class"), 
-                          Path.Combine(pspDir.FullName, 
-                                       this.packageName.Replace('.', '\\'),
-                                       new FileInfo(this.javaFilePath).Name.Replace(".java", ".class")));
+                File.Move(javaFilePath.Replace(".java",".class"), 
+                          javaFilePath.Replace(pspDir.FullName,
+                                               Path.Combine(pspDir.FullName,this.packageName.Replace('.', '\\'))).Replace(".java", ".class"));
+
                 this.runTestCmd = $"java -classpath {pspDir.FullName} {this.packageName}.{new FileInfo(this.javaFilePath).Name.Replace(".java", "")} ";
             }
             else
             {
-                this.runTestCmd = $"java -classpath {pspDir.FullName} {new FileInfo(this.javaFilePath).Name.Replace(".class", "")} ";
+                this.runTestCmd = $"java -classpath {pspDir.FullName} {new FileInfo(this.javaFilePath).Name.Replace(".java", "")} ";
             }
         }
 
@@ -68,7 +70,7 @@ namespace AutoTest
 
             if (!this.canRunTest)
             {
-                Logger.Error($"Directory name doesn't meet the requirement:\n{pspDir.Name}");
+                Logger.Error($"Directory name doesn't meet the requirement:{pspDir.Name}");
                 return ;
             }
             FileInfo _javaFile = new FileInfo(
@@ -96,15 +98,18 @@ namespace AutoTest
         public void CheckScannerAndPackage()
         {
             string _fileContent = File.ReadAllText(this.javaFilePath);
+            
             //如果代码中含有package信息，则保存package信息
             var match = Regex.Match(_fileContent, @"(?:^|\n)(\s*)package(\s+)(.*)(\s*);");
-            
-            //this.packageName = match.Groups[0].Value.Trim();
             this.packageName = match.Value.Replace("package","").Replace(";","").Trim();
             
-            //如果代码中含有scanner，则设置
+            //如果代码中含有scanner，则
             this.canRunTest = !_fileContent.Contains("import java.util.Scanner;");
-            
+            if (!this.canRunTest)
+            {
+                Logger.Error($"{dirName} used Scanner.");
+                return;
+            }
         }
     }
 }

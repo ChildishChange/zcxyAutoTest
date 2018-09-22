@@ -8,6 +8,11 @@ namespace AutoTest
 {
     public class ExerciseHandler
     {
+        public static char[] reversibleOps = { '+', '*' };
+        public static char[] Ops = { '+', '*','-','/' };
+
+
+
         public static bool Calculate(string exercise, string answer)
         {
             if (exercise.Contains('+'))
@@ -49,17 +54,15 @@ namespace AutoTest
         public static string Swap(string line)
         {
             StringBuilder sb = new StringBuilder();
-            if (line.Contains('+'))
+            foreach (char op in reversibleOps)
             {
-                var ops = line.Split('+');
-                sb.Append((int.Parse(ops[0]) > int.Parse(ops[1])) ? ops[1] + "+" + ops[0] : line);
-                return sb.ToString();
-            }
-            if (line.Contains('×'))
-            {
-                var ops = line.Split('×');
-                sb.Append((int.Parse(ops[0]) > int.Parse(ops[1])) ? ops[1] + "×" + ops[0] : line);
-                return sb.ToString();
+                if (line.Contains(op))
+                {
+                    line = line.TrimEnd('=');
+                    var ops = line.Split(op);
+                    sb.Append((int.Parse(ops[0]) > int.Parse(ops[1])) ? ops[1] + op + ops[0] : line);
+                    return sb.ToString();
+                }
             }
             return line;
         }
