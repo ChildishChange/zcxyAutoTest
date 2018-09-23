@@ -22,25 +22,24 @@ namespace AutoTest
         {
             Logger.Info($"Start initializing {pspDir}");
             this.dirName = pspDir.Name;
-
+            
             CheckPSP(pspDir);
             if (!canRunTest) { return; }
 
-            CheckScannerAndPackage();
-            if (!canRunTest) { return; }
-            
             this.canRunTest = Tester.CallCmd($"javac {javaFilePath.Replace("MathExam"+dirName.Remove(0, 3),"*")}") ||
                               Tester.CallCmd($"javac -encoding UTF-8 {javaFilePath.Replace("MathExam" + dirName.Remove(0, 3), "*")}");
             //this.canRunTest = Tester.CallCmd($"javac {javaFilePath}") || 
             //                  Tester.CallCmd($"javac -encoding UTF-8 {javaFilePath}");
-
             if (!canRunTest)
             {
                 Logger.Error($"Error happened when compiling {pspDir}");
                 return;
             }
-            
-            if(!string.IsNullOrEmpty(this.packageName))
+
+            CheckScannerAndPackage();
+            if (!canRunTest) { return; }
+
+            if (!string.IsNullOrEmpty(this.packageName))
             {
                 if (Directory.Exists(Path.Combine(pspDir.FullName, this.packageName.Replace('.', '\\'))))
                     Directory.Delete(Path.Combine(pspDir.FullName, this.packageName.Replace('.', '\\')),true);
