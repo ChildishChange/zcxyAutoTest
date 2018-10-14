@@ -11,9 +11,9 @@ namespace AutoTest
     {
         public static char[] reversibleOps = { '+', '*' };
         
-        public static bool Calculate(string exercise)
+        public static bool Calculate(string exercise, int grade)
         {
-            if (exercise.Contains('/'))
+            if (exercise.Contains('/') && grade == 2)   
             {
                 var answer = exercise.Split('=')[1];
                 var ops = exercise.Split('=')[0].Split('/');
@@ -34,22 +34,6 @@ namespace AutoTest
             {
                 return (bool)new DataTable().Compute(exercise, "");
             }
-        }
-
-
-        public static string Swap(string line)
-        {
-            StringBuilder sb = new StringBuilder();
-            foreach (char op in reversibleOps)
-            {
-                if (line.Contains(op))
-                {
-                    var ops = line.Split(op);
-                    sb.Append((int.Parse(ops[0]) > int.Parse(ops[1])) ? ops[1] + op + ops[0] : line);
-                    return sb.ToString();
-                }
-            }
-            return line;
         }
     }
 }

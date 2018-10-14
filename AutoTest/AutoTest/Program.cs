@@ -54,8 +54,10 @@ namespace AutoTest
                 //获取测试指令
                 var correctTests = configJson["correct"].Select(x => x.ToString()).ToList();
                 var robustTests = configJson["robust"].Select(x => x.ToString()).ToList();
-                
+
+
                 //开始测试
+
                 foreach (var javaProgram in JavaProgramList)
                 {
                     if (!javaProgram.canRunTest) continue;
@@ -71,11 +73,12 @@ namespace AutoTest
                 Logger.Info("Program exit because of error above.");
                 return 1;
             }
-            
+
             return 0;
         }
 
-        
+
+
         public static void CloneRepo(string url, string path)
         {
             if (Directory.Exists(path))
@@ -85,11 +88,13 @@ namespace AutoTest
             }
             Repository.Clone(url, path);
             Logger.Info("Cloned this repository successfully.");
-            
+
             Thread.Sleep(1000);
+
+
         }
 
 
-        
+
     }
 }

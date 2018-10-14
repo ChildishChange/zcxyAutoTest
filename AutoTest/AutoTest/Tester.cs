@@ -26,8 +26,6 @@ namespace AutoTest
             };
             try
             {
-                Stopwatch timeWatch = new Stopwatch();
-                timeWatch.Start();
                 using (Process cmd = Process.Start(binaryInfo))
                 {
                     //TODO 添加超时kill process
@@ -44,7 +42,6 @@ namespace AutoTest
 
                     cmd.WaitForExit();
                     
-                    timeWatch.Stop();
                     //Release all resources
                     if (!cmd.HasExited)
                     {
@@ -83,10 +80,8 @@ namespace AutoTest
             {
                 Logger.Info($"Start test \"{test}\"");
                 if(File.Exists(@".\out.txt")){ File.Delete(@".\out.txt"); }
-
-
+                
                 //需要添加一个东西
-
                 if(CallCmd(javaProgram.runTestCmd + test))
                 {
                     if (!File.Exists(@".\out.txt"))
@@ -94,16 +89,13 @@ namespace AutoTest
                         Logger.Error("File \"out.txt\" not found!");
                         continue;
                     }
-
                     CheckOutFile(@".\out.txt", test);
-
                 }
                 else
                 {
                     Logger.Error($"Error happened when test '{test}'");
                 }
                 Thread.Sleep(2000);
-
             }
         }
 
@@ -119,31 +111,33 @@ namespace AutoTest
 
         public static void CheckOutFile(string outFile, string testStr)
         {
-            var parameters = testStr.Split(' ');
-            var numOfExercise = int.Parse(parameters.First());
-            var exercises = new List<string>();
-            bool containsEqual = false;
+            const string gradeOnePattern = @"^\(\d{1,}\)\d{1,2}[+-]\d{1,2}(=)?$";
+            const string gradeTwoPattern = @"^\(\d{1,}\)\d{1,2}[×÷*/]\d{1,2}(=)?$";
+            const string gradeThreePattern = @"^\(\d{1,}\)[-+]?([0-9]+($|[-+*/×÷]))*(((?<o>\()[-+]?([0-9]+[-+*/×÷])*)+[0-9]+((?<-o>\))([-+*/×÷][0-9]+)*)+($|[-+*/×÷]))*(?(o)(?!))$";
+            
+            var rawParameters = testStr.Split(' ');
 
-            const string addMinusPattern = @"^\(\d{1,}\)\d{1,2}[+-]\d{1,2}(=)?$";
-            const string divideMultiPattern = @"^\(\d{1,}\)\d{1,2}[×÷*/]\d{1,2}(=)?$";
+            Dictionary<string, int> parameters = new Dictionary<string, int>
+            {
+                { rawParameters[0], int.Parse(rawParameters[1]) },
+                { rawParameters[2], int.Parse(rawParameters[3]) }
+            };
+            
+            var numOfExercise = parameters["-n"];
+            var grade = parameters["-grade"];
 
-            const string addMinusEqPattern = @"^\(\d{1,}\)\d{1,2}[+-]\d{1,2}=\d{1,2}$";
-            const string divideMultiEqPattern = @"^\(\d{1,}\)\d{1,2}[×*]\d{1,2}=\d{1,2}$|^\(\d{1,}\)\d{1,2}[÷/]\d{1,2}=\d{1,2}(\.{3}\d{1,2})?$";
-
-            var grade = (parameters.Count() > 1) ? int.Parse(parameters.Last()) : 1;
-
-            var finalPattern = (grade == 1) ? addMinusPattern : divideMultiPattern;
-            var finalEqPattern = (grade == 1) ? addMinusEqPattern : divideMultiEqPattern;
-
+            var finalPattern = (grade == 1) ? gradeOnePattern : 
+                               (grade == 2) ? gradeTwoPattern : gradeThreePattern;
+            
             FileStream fileStream = new FileStream(outFile, FileMode.Open, FileAccess.Read);
             StreamReader streamReader = new StreamReader(fileStream, Encoding.Default);
             fileStream.Seek(0, SeekOrigin.Begin);
 
             if (numOfExercise == 0){ return; }
 
-            Dictionary<string, string> exerciseDic = new Dictionary<string, string>();
             List<string> exerciseList = new List<string>();
 
+            bool containsEqual = false;
             var i = 1;
             for (; i <= numOfExercise; i++)
             {
@@ -183,12 +177,6 @@ namespace AutoTest
                 var index = Regex.Match(line, "\\(\\d{1,}\\)").Value;
                 var indexOfExercise = int.Parse(index.Trim('(', ')'));
                 
-                if (exerciseDic.ContainsValue(ExerciseHandler.Swap(line.Replace(index , ""))))
-                {
-                    Logger.Warning($"Duplicated : {line}");
-                }
-                exerciseDic.Add(line, ExerciseHandler.Swap(line.Replace(index, "")));
-                
                 //判断题号
                 if (i != indexOfExercise)
                 {
@@ -217,6 +205,9 @@ namespace AutoTest
             for (i = 1; i < numOfExercise; i++)
             {
                 var line = streamReader.ReadLine().Replace(" ", "");
+                line = line.Replace('÷', '/');
+                line = line.Replace('×', '*');
+
 
                 if (line == null)
                 {
@@ -233,20 +224,10 @@ namespace AutoTest
                     streamReader.Close();
                     return;
                 }
-
-                //匹配剩下的部分是否符合要求
-                if (!Regex.IsMatch(line, finalEqPattern))
-                {
-                    Logger.Error($"Wrong format in answer {i} : {line}");
-                    fileStream.Close();
-                    streamReader.Close();
-                    return;
-                }
-
-
+                
                 //计算算式的答案
                 var index = Regex.Match(line, "\\(\\d{1,}\\)").Value;
-                if (!ExerciseHandler.Calculate(line.Replace(index,"")))
+                if (!ExerciseHandler.Calculate(line.Replace(index,""),grade))
                 {
                     Logger.Error($"Wrong answer : {line}");
                     fileStream.Close();
